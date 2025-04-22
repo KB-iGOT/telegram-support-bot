@@ -1,0 +1,5 @@
+{
+    "language_selection" : "Ask me about anything that you want. You can type or speak.",
+    "context_loading_msg": "Please wait, crafting response. It might take upto a minute.",
+    "context_error_msg": "An unknown error occured, please try after sometime"
+}
