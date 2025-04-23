@@ -81,14 +81,6 @@ The Telegram Bot is a Python-based bot that interacts with the KB Agent API Serv
    - Select preferred language
    - Start querying questions
 
-## Configuration (config.ini)
-
-| Variable                        | Description                                                                                    | Default Value                        |
-|:--------------------------------|------------------------------------------------------------------------------------------------|--------------------------------------|
-| default.language      | This configuration sets the default language for the chatbot interaction. When a user starts a conversation, the chatbot will use this language unless explicitly changed. | en                                    |
-| default.welcome_msg         | This configuration defines the initial message displayed by the chatbot when a user starts a conversation.      | Namaste 🙏 Welcome to *iGOT Assisstant* _(Powered by Bhashini)_                                |
-| default.languages    | This configuration specifies the list of languages displayed by the chatbot  when a user starts a conversation.                                                           |  For example: [{"text": "English", "code": "en","index": 1}...{}]    |
-
 ## Contributing
 Contributions are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request.
 
