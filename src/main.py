@@ -15,48 +15,28 @@ Press Ctrl-C on the command line or send a signal to the process to stop the bot
 """
 import asyncio
 import json
-import os
-import redis
-from dataclasses import dataclass
-from typing import Union, TypedDict
 import requests
 import uvicorn
+from typing import Union, List
+
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 from starlette.routing import Route
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import __version__ as TG_VER
-from telegram.ext import (
-    Application,
-    CallbackContext,
-    CommandHandler,
-    ContextTypes,
-    ExtBot,
-    CallbackQueryHandler, MessageHandler,
-)
-from typing import List, Dict
-from language_util import language_init, get_languages, get_message
-from telegram.ext import filters
-from config_util import get_config_value
-from logger import logger
+from telegram.ext import (Application, CommandHandler, ContextTypes, 
+                          CallbackQueryHandler, MessageHandler,)
 from telegram.helpers import escape_markdown
+from telegram.ext import filters
 
-# Define configuration constants
-TELEGRAM_BASE_URL = os.environ["TELEGRAM_BASE_URL"]
-TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
-botName = os.environ['TELEGRAM_BOT_NAME']
-concurrent_updates = int(os.getenv('concurrent_updates', '256'))
-pool_time_out = int(os.getenv('pool_timeout', '30'))
-connection_pool_size = int(os.getenv('connection_pool_size', '1024'))
-connect_time_out = int(os.getenv('connect_timeout', '300'))
-read_time_out = int(os.getenv('read_timeout', '15'))
-write_time_out = int(os.getenv('write_timeout', '10'))
-workers = int(os.getenv("UVICORN_WORKERS", "4"))
-redis_host = os.getenv("REDIS_HOST", "172.17.0.1")
-redis_port = int(os.getenv("REDIS_PORT", "6379"))
-redis_index = int(os.getenv("REDIS_INDEX", "1"))
-DEFAULT_LANGUAGE = get_config_value('default', 'language', None)
+from utils.language_util import language_init, get_languages, get_message
+from core.config import settings
+from core.logger import logger
+from memory.redis import retrieve_data, store_data
+from data_models import ApiError, ApiResponse, CustomContext
+
 try:
     from telegram import __version_info__
 except ImportError:
@@ -69,53 +49,8 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
 
-# Connect to Redis
-redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_index)  # Adjust host and port if needed
 
-
-# Define a function to store and retrieve data in Redis
-def store_data(key, value):
-    redis_client.set(key, value)
-
-
-def retrieve_data(key):
-    data_from_redis = redis_client.get(key)
-    return data_from_redis.decode('utf-8') if data_from_redis is not None else None
-
-
-@dataclass
-class WebhookUpdate:
-    """Simple dataclass to wrap a custom update type"""
-    user_id: int
-    payload: str
-
-
-class CustomContext(CallbackContext[ExtBot, dict, dict, dict]):
-    """
-    Custom CallbackContext class that makes `user_data` available for updates of type
-    `WebhookUpdate`.
-    """
-
-    @classmethod
-    def from_update(
-            cls,
-            update: object,
-            application: "Application",
-    ) -> "CustomContext":
-        if isinstance(update, WebhookUpdate):
-            return cls(application=application, user_id=update.user_id)
-        return super().from_update(update, application)
-
-
-class ApiResponse(TypedDict):
-    output: any
-
-
-class ApiError(TypedDict):
-    error: Union[str, requests.exceptions.RequestException]
-
-
-def get_user_langauge(update: Update, default_lang=DEFAULT_LANGUAGE) -> str:
+def get_user_langauge(update: Update, default_lang=settings.DEFAULT_LANGUAGE) -> str:
     user_id_lan = str(update.effective_chat.id) + '_language'
     selected_lang = retrieve_data(user_id_lan)
     if selected_lang:
@@ -123,20 +58,16 @@ def get_user_langauge(update: Update, default_lang=DEFAULT_LANGUAGE) -> str:
     else:
         return default_lang
 
-
-
 async def send_message_to_bot(chat_id, text, context: CustomContext, parse_mode="Markdown") -> None:
     """Send a message  to bot"""
     await context.bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode)
-
 
 async def start(update: Update, context: CustomContext) -> None:
     """Send a message when the command /start is issued."""
     user_name = update.message.chat.first_name
     logger.info({"id": update.effective_chat.id, "username": user_name, "category": "logged_in", "label": "logged_in"})
-    await send_message_to_bot(update.effective_chat.id, get_config_value('default', 'welcome_msg', None), context)
+    await send_message_to_bot(update.effective_chat.id, settings.WELCOME_MSG, context)
     await language_handler(update, context)
-
 
 def create_language_keyboard():
     """Creates an inline keyboard markup with buttons for supported languages."""
@@ -150,7 +81,6 @@ def create_language_keyboard():
             
     return inline_keyboard_buttons
 
-
 async def language_handler(update: Update, context: CustomContext):
     inline_keyboard_buttons = create_language_keyboard()
     if inline_keyboard_buttons:
@@ -158,7 +88,6 @@ async def language_handler(update: Update, context: CustomContext):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="\nPlease select a Language to proceed", reply_markup=reply_markup)
     else:
         return query_handler
-
 
 async def preferred_language_callback(update: Update, context: CustomContext):
     callback_query = update.callback_query
@@ -173,40 +102,19 @@ async def preferred_language_callback(update: Update, context: CustomContext):
     await context_handler(update, context)
     # return query_handler
 
-def create_context_keyboard_buttons(contexts: List[dict]):
-    inline_keyboard_buttons = []
-    for context in contexts:
-        inline_keyboard_buttons.append(
-        [InlineKeyboardButton(context["label"], callback_data=f'contextname_{context["value"]}')])
-    return InlineKeyboardMarkup(inline_keyboard_buttons)
-
 async def context_handler(update: Update, context: CustomContext):
     selected_language = get_user_langauge(update)
     text_message = get_message(language=selected_language, key="language_selection")
     reply_markup = None    
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text_message, reply_markup=reply_markup, parse_mode="Markdown") 
-        
-async def preferred_context_callback(update: Update, context: CustomContext):
-    callback_query = update.callback_query
-    preferred_context = callback_query.data[len("contextname_"):]
-    context.user_data['contextname'] = preferred_context
-    user_context_id = str(update.effective_chat.id) + '_context'
-    store_data(user_context_id, preferred_context)
-    selected_language = get_user_langauge(update)
-    text_msg = get_message(selected_language,"context_selection", preferred_context)
-    logger.info({"id": update.effective_chat.id, "username": update.effective_chat.first_name, "category": "context_selection", "label": "context_selection", "value": preferred_context})
-    await callback_query.answer()
-    await context.bot.sendMessage(chat_id=update.effective_chat.id, text=text_msg, parse_mode="Markdown")
-
 
 async def help_command(update: Update, context: CustomContext) -> None:
     """Send a message when the command /help is issued."""
     await update.message.reply_text("Help!")
 
 def get_bot_endpoint():
-    return os.environ["KB_AGENT_BASE_URL"]  + '/chat/send'
+    return settings.KB_AGENT_BASE_URL + '/chat/send'
         
-
 async def get_query_response(query: str, voice_message_url: str, update: Update, context: CustomContext) -> Union[
     ApiResponse, ApiError]:
     voice_message_language = get_user_langauge(update)
@@ -216,23 +124,15 @@ async def get_query_response(query: str, voice_message_url: str, update: Update,
     message_id = update.message.message_id
     url = get_bot_endpoint()
     try:
-        reqBody: dict
-        if voice_message_url is None:
-            reqBody = {
-                "sessionid": "8080",
-                "text": query
+        reqBody: dict = {
+                "session_id": user_id,
+                "channel_id": "telegram",
+                "text": query,
+                "language": voice_message_language
             }
-        else:
-            reqBody = {
-                "input": {
-                    "language": voice_message_language,
-                    "audio": voice_message_url
-                },
-                "output": {
-                    'format': 'audio'
-                }
-            }
-        # reqBody["input"]["context"] = selected_context
+        if voice_message_url is not None:
+            reqBody["audio"] = voice_message_url
+        
         logger.info(f" API Request Body: {reqBody}")
         headers = {
             # "x-source": "telegram",
@@ -250,7 +150,6 @@ async def get_query_response(query: str, voice_message_url: str, update: Update,
         return {'error': e}
     except (KeyError, ValueError):
         return {'error': 'Invalid response received from API'}
-
 
 async def response_handler(update: Update, context: CustomContext) -> None:
     await query_handler(update, context)
@@ -275,7 +174,6 @@ async def query_handler(update: Update, context: CustomContext):
     await context.bot.send_message(chat_id=update.effective_chat.id, text=loading_msg)
     await handle_query_response(update, context, query, voice_message_url)
     return query_handler
-
 
 async def handle_query_response(update: Update, context: CustomContext, query: str, voice_message_url: str):
     response = await get_query_response(query, voice_message_url, update, context)
@@ -307,7 +205,6 @@ async def handle_query_response(update: Update, context: CustomContext, query: s
             audio_data = audio_request.content
             await context.bot.send_voice(chat_id=update.effective_chat.id, voice=audio_data)
 
-
 async def preferred_feedback_callback(update: Update, context: CustomContext) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
@@ -326,7 +223,6 @@ async def preferred_feedback_callback(update: Update, context: CustomContext) ->
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text("Please provide your feedback:", reply_markup=reply_markup)
 
-
 async def preferred_feedback_reply_callback(update: Update, context: CustomContext) -> None:
     """Parses the CallbackQuery and updates the message text."""
     query = update.callback_query
@@ -334,34 +230,33 @@ async def preferred_feedback_reply_callback(update: Update, context: CustomConte
     # # Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
     await query.answer()
 
-
 async def main() -> None:
     """Set up PTB application and a web application for handling the incoming requests."""
     logger.info('################################################')
-    logger.info('# Telegram bot name %s', botName)
+    logger.info('# Telegram bot name %s', settings.TELEGRAM_BOT_NAME)
     logger.info('################################################')
     language_init()
     context_types = ContextTypes(context=CustomContext)
     # Here we set updater to None because we want our custom webhook server to handle the updates.persistence(persistence)
     # and hence we don't need an Updater instance
     application = (
-        Application.builder().token(TELEGRAM_BOT_TOKEN).updater(None).context_types(context_types).pool_timeout(pool_time_out).connection_pool_size(connection_pool_size).concurrent_updates(True).concurrent_updates(concurrent_updates).connect_timeout(
-            connect_time_out).read_timeout(read_time_out).write_timeout(write_time_out).build()
+        Application.builder().token(settings.TELEGRAM_BOT_TOKEN).updater(None).context_types(context_types)
+            .pool_timeout(settings.POOL_TIMEOUT).connection_pool_size(settings.CONNECTION_POOL_SIZE).concurrent_updates(True)
+            .concurrent_updates(settings.CONCURRENT_UPDATES).connect_timeout(settings.CONNECT_TIMEOUT).read_timeout(settings.READ_TIMEOUT)
+            .write_timeout(settings.WRITE_TIMEOUT).build()
     )
 
     # register handlers
     application.add_handler(CommandHandler("start", start, block=False))
     application.add_handler(CommandHandler("help", help_command, block=False))
     application.add_handler(CommandHandler('select_language', language_handler, block=False))
-    application.add_handler(CommandHandler('select_context', context_handler, block=False))
     application.add_handler(CallbackQueryHandler(preferred_language_callback, pattern=r'lang_\w*', block=False))
-    application.add_handler(CallbackQueryHandler(preferred_context_callback, pattern=r'contextname_\w*', block=False))
     application.add_handler(CallbackQueryHandler(preferred_feedback_callback, pattern=r'message-\w*', block=False))
     application.add_handler(CallbackQueryHandler(preferred_feedback_reply_callback, pattern=r'replymessage_\w*', block=False))
     application.add_handler(MessageHandler(filters.TEXT | filters.VOICE, response_handler, block=False))
 
     # Pass webhook settings to telegram
-    await application.bot.set_webhook(url=f"{TELEGRAM_BASE_URL}/telegram", allowed_updates=Update.ALL_TYPES)
+    await application.bot.set_webhook(url=f"{settings.TELEGRAM_BASE_URL}/telegram", allowed_updates=Update.ALL_TYPES)
 
     # Set up webserver
     async def telegram(request: Request) -> Response:
@@ -388,7 +283,7 @@ async def main() -> None:
             port=8000,
             use_colors=False,
             host="0.0.0.0",
-            workers=workers
+            workers=settings.UVICORN_WORKERS
         )
     )
 

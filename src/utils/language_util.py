@@ -1,17 +1,20 @@
 import glob
 import json
-from logger import logger
-from config_util import get_config_value
+from pathlib import Path
+from core.logger import logger
+from core.config import settings
 import os
 
 language_dict = {}
-default_lang = get_config_value('default', 'language', None)
+default_lang = settings.DEFAULT_LANGUAGE
 languages_array = []
 
 def language_init():
     """Loads language JSON files and builds the language dictionary."""
+    
+    BASE_DIR = Path("./src/languages/*.json")
 
-    for filename in glob.glob('./languages/*.json'):
+    for filename in glob.glob(str(BASE_DIR)):
         lang_code = filename.split('/')[-1].split('.')[0]
         with open(filename, 'r') as f:
             language_dict[lang_code] = json.load(f)
@@ -40,5 +43,5 @@ def get_message(language=default_lang, key=None, bot_id=None):
 
 def get_languages():
     """Returns the global languages array."""
-    languages = os.getenv('SUPPORTED_LANGUAGES', "").split(",")
-    return list(filter(lambda x: x.get("code") in languages , json.loads(get_config_value('default', 'languages', None))))
+    languages = settings.SUPPORTED_LANGUAGES.split(",")
+    return list(filter(lambda x: x.get("code") in languages , settings.LANGUAGES))

@@ -1,0 +1,15 @@
+[project]
+name = "telegram-support-bot"
+version = "0.1.0"
+description = "The Telegram Bot is a Python-based bot that interacts with the KB Agent API Server via Telegram"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-settings>=2.9.1",
+    "python-dotenv>=1.1.0",
+    "python-telegram-bot>=22.0",
+    "redis>=5.2.1",
+    "requests>=2.32.3",
+    "starlette>=0.46.2",
+    "uvicorn>=0.34.2",
+]

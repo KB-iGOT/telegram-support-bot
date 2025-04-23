@@ -1,11 +1,9 @@
 import logging
 import os
-from dotenv import load_dotenv
+from .config import settings
 
-load_dotenv()
-logger_name = os.environ['TELEGRAM_BOT_NAME']
-
-log_level = os.environ["LOG_LEVEL"]
+logger_name = settings.TELEGRAM_BOT_NAME
+log_level = settings.LOG_LEVEL
 
 log_format = '%(asctime)s - %(thread)d - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(

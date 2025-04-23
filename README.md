@@ -22,32 +22,30 @@ The Telegram Bot is a Python-based bot that interacts with the KB Agent API Serv
    git clone https://github.com/KB-iGOT/telegram_support_bot.git
    cd telegram_support_bot
    ```
-
-2.  **Create a virtual environment:**
-
-    ```bashs
-    python3.12 -m venv venv
-    source venv/bin/activate  # On Linux/macOS
-    venv\Scripts\activate  # On Windows
-    ```
-
-3. **Install Dependencies**
+2. **Install Dependencies**
 
    ```bash
-   pip install uv && uv pip install -r requirements.txt
+   pip install uv && uv sync
    ```
 
-3. **Set up your Telegram bot:**
+3.  **Active a virtual environment:**
+
+    ```bashs
+    source .venv/bin/activate  # On Linux/macOS
+    source .venv\Scripts\activate  # On Windows
+    ```
+
+
+4. **Set up your Telegram bot:**
    - Create a new bot on Telegram and obtain the [bot token](https://core.telegram.org/bots/tutorial#obtain-your-bot-token).
    - Set up a webhook URL (using a public domain with [SSL/TLS support](https://core.telegram.org/bots/webhooks#always-ssl-tls))
 
      If you're having any trouble setting up webhooks, please check out this [amazing guide to webhooks](https://core.telegram.org/bots/webhooks).
 
-4. **Set up environment variables:**
+5. **Set up environment variables:**
    - Create a .env file in the project root and add the following variables:
    ```bash
    LOG_LEVEL="INFO" # INFO, DEBUG, ERROR
-   SERVICE_ENVIRONMENT="dev"
 
    TELEGRAM_BASE_URL=https://your-telegram-callback-url.com
    TELEGRAM_BOT_TOKEN=your-telegram-bot-token
@@ -61,6 +59,8 @@ The Telegram Bot is a Python-based bot that interacts with the KB Agent API Serv
    REDIS_INDEX=your-redis-index
    ```
    **Note:** This telegram bot only supports the following languages: en, bn, gu, hi, kn, ml, mr, or, pa, ta, te.
+
+   You can find further configuration parameters in `src/core/config.py`.
 
 ## Usage
 
