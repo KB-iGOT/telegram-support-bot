@@ -40,6 +40,9 @@ COPY --from=builder /app /app
 # Set the PATH to include the virtual environment
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Set working directory
+WORKDIR /app
+
 # Expose the application port
 EXPOSE 8000
 
