@@ -125,10 +125,11 @@ async def get_query_response(query: str, voice_message_url: str, update: Update,
     url = get_bot_endpoint()
     try:
         reqBody: dict = {
-                "session_id": user_id,
+                "session_id": str(user_id),
                 "channel_id": "telegram",
                 "text": query,
-                "language": voice_message_language
+                "language": voice_message_language,
+                "audio": ''
             }
         if voice_message_url is not None:
             reqBody["audio"] = voice_message_url
@@ -140,7 +141,7 @@ async def get_query_response(query: str, voice_message_url: str, update: Update,
             # "x-device-id": f"d{user_id}",
             # "x-consumer-id": str(user_id)
         }
-        response = requests.post(url, data=json.dumps(reqBody), headers=headers, verify=False)
+        response = requests.post(url, data=json.dumps(reqBody))
         response.raise_for_status()
         data = response.json()
         requests.session().close()
