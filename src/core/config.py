@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     UVICORN_WORKERS: int = Field(default=4)
    
 
-    WELCOME_MSG: str = "Namaste 🙏\nWelcome to *iGOT Assistant*\n_(Powered by Bhashini)_"
+    WELCOME_MSG: str = "Namaste 🙏\nWelcome to *KB Support Assistant*\n_(Powered by Bhashini)_"
     DEFAULT_LANGUAGE: str = Field(default="en")
     SUPPORTED_LANGUAGES: str = Field(default="en,bn,gu,hi,kn,ml,mr,or,pa,ta,te")
     LANGUAGES: List[Dict] = [

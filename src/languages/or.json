@@ -1,5 +1,5 @@
 {
-    "language_selection" : "Ask me about anything that you want. You can type or speak.",
+    "language_selection" : "Hello! I am *KB Support Assistant*, your dedicated virtual assistant for instant support on iGOT Karmayogi. My purpose is to help you easily resolve issues and effectively navigate the platform. I can provide quick answers to common queries and guide you through features such as registration, login, course discovery, and account management. Please let me know how I can assist you.\n\nFor example, you can ask:\n- How to earn Karma points?\n- I want to update my registered mobile number\n- My certificate is not generated.\n- How many course have I enrolled to?\n- How many certificates do I have?\n- How many courses have I completed?\n- Which content is not completed in course 'Effective Communication'? \n\n*Note:* You can also use your voice to ask queries.",
     "context_loading_msg": "ପ୍ରତିକ୍ରିୟା ପ୍ରସ୍ତୁତ କରି ଦୟାକରି ଅପେକ୍ଷା କରନ୍ତୁ | ଏହା ଏକ ମିନିଟ୍ ପର୍ଯ୍ୟନ୍ତ ନେଇପାରେ |",
     "context_error_msg": "ଏକ ଅଜ୍ଞାତ ତ୍ରୁଟି ଘଟିଗଲା, ଦୟାକରି କିଛି ସମୟ ପରେ ଚେଷ୍ଟା କରନ୍ତୁ |"
 }

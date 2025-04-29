@@ -85,7 +85,7 @@ async def language_handler(update: Update, context: CustomContext):
     inline_keyboard_buttons = create_language_keyboard()
     if inline_keyboard_buttons:
         reply_markup = InlineKeyboardMarkup(inline_keyboard_buttons)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="\nPlease select a Language to proceed", reply_markup=reply_markup)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="\nPlease select a language to proceed", reply_markup=reply_markup)
     else:
         return query_handler
 
@@ -171,8 +171,10 @@ async def query_handler(update: Update, context: CustomContext):
         voice_message_url = voice_file.file_path
         logger.info({"id": update.effective_chat.id, "username": update.effective_chat.first_name, "category": "query_handler", "label": "voice_question", "value": voice_message_url})
     selected_language = get_user_langauge(update)
-    loading_msg = get_message(language=selected_language, key="context_loading_msg")
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=loading_msg)
+    # loading_msg = get_message(language=selected_language, key="context_loading_msg")
+    # await context.bot.send_message(chat_id=update.effective_chat.id, text=loading_msg)
+    # await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Just a few seconds...')
+    await context.bot.sendChatAction(chat_id=update.effective_chat.id, action="typing")
     await handle_query_response(update, context, query, voice_message_url)
     return query_handler
 
@@ -192,7 +194,7 @@ async def handle_query_response(update: Update, context: CustomContext, query: s
     else:
         logger.info({"id": update.effective_chat.id, "username": update.effective_chat.first_name,
                      "category": "handle_query_response", "label": "answer_received", "value": query})
-        answer = response['response']
+        answer = response['text']
         keyboard = [
             [InlineKeyboardButton("👍🏻", callback_data=f'message-liked__{update.message.id}'),
              InlineKeyboardButton("👎🏻", callback_data=f'message-disliked__{update.message.id}')]
@@ -200,8 +202,8 @@ async def handle_query_response(update: Update, context: CustomContext, query: s
         reply_markup = InlineKeyboardMarkup(keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=escape_markdown(answer), parse_mode="Markdown")
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Please provide your feedback", parse_mode="Markdown", reply_markup=reply_markup)
-        if response['output']["audio"]:
-            audio_output_url = response['output']["audio"]
+        if response["audio"]:
+            audio_output_url = response["audio"]
             audio_request = requests.get(audio_output_url)
             audio_data = audio_request.content
             await context.bot.send_voice(chat_id=update.effective_chat.id, voice=audio_data)
